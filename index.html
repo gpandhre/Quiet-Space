@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>A Quiet Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #fdf6f0;
+      --card: rgba(255,255,255,0.55);
+      --card-border: rgba(255,255,255,0.85);
+      --text-primary: #3d2c3e;
+      --text-secondary: #7a5f7e;
+      --text-soft: #b09ab5;
+      --accent1: #e8c4d4;
+      --accent2: #c5b4e8;
+      --glow: rgba(200,160,220,0.2);
+      --shadow: 0 8px 40px rgba(160,120,180,0.14);
+      --modal-bg: rgba(253,248,252,0.98);
+    }
+
+    [data-theme="dark"] {
+      --bg: #1a1320;
+      --card: rgba(38,26,52,0.7);
+      --card-border: rgba(180,140,210,0.2);
+      --text-primary: #eddff5;
+      --text-secondary: #c4a8d4;
+      --text-soft: #7a5f8a;
+      --accent1: #5a3048;
+      --accent2: #3a2860;
+      --glow: rgba(180,120,220,0.14);
+      --shadow: 0 8px 40px rgba(0,0,0,0.4);
+      --modal-bg: rgba(24,16,34,0.99);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      transition: background 0.9s ease, color 0.9s ease;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* ── Background orbs ── */
+    .bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.38; transition: background 0.9s; }
+    [data-theme="dark"] .orb { opacity: 0.2; }
+
+    .orb-1 { width:520px;height:520px;background:#f4c6d8;top:-120px;left:-120px;animation:drift1 20s ease-in-out infinite alternate; }
+    .orb-2 { width:420px;height:420px;background:#d4c6f4;top:35%;right:-110px;animation:drift2 25s ease-in-out infinite alternate; }
+    .orb-3 { width:360px;height:360px;background:#c6e8f4;bottom:5%;left:25%;animation:drift3 22s ease-in-out infinite alternate; }
+    [data-theme="dark"] .orb-1 { background:#5a2a3a; }
+    [data-theme="dark"] .orb-2 { background:#2e1e60; }
+    [data-theme="dark"] .orb-3 { background:#1a3050; }
+
+    @keyframes drift1 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(50px,60px) scale(1.1)} }
+    @keyframes drift2 { 0%{transform:translate(0,0) scale(1.05)} 100%{transform:translate(-40px,50px) scale(0.95)} }
+    @keyframes drift3 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(30px,-40px) scale(1.08)} }
+
+    /* ── Particles ── */
+    .particle { position:fixed;border-radius:50%;pointer-events:none;z-index:0;animation:floatUp linear infinite;opacity:0; }
+    @keyframes floatUp {
+      0%  { opacity:0; transform:translateY(0) scale(0.4); }
+      15% { opacity:0.45; }
+      85% { opacity:0.25; }
+      100%{ opacity:0; transform:translateY(-140px) scale(1.3); }
+    }
+
+    /* ── Navbar ── */
+    .navbar {
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      padding:1.2rem 2rem;
+      display:flex;justify-content:space-between;align-items:center;
+      backdrop-filter:blur(14px);
+      background:rgba(255,255,255,0.1);
+      border-bottom:1px solid rgba(255,255,255,0.15);
+      transition:background 0.9s;
+      animation:fadeDown 1s ease both 0.3s;
+    }
+    [data-theme="dark"] .navbar { background:rgba(18,12,28,0.55); }
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+
+    .nav-logo { font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.15rem;color:var(--text-soft);letter-spacing:.06em; }
+    .nav-controls { display:flex;gap:.7rem;align-items:center; }
+    .nav-btn {
+      background:var(--card);border:1px solid var(--card-border);border-radius:50px;
+      padding:.42rem 1rem;font-size:.78rem;color:var(--text-secondary);cursor:pointer;
+      backdrop-filter:blur(10px);transition:all .3s ease;
+      font-family:'DM Sans',sans-serif;white-space:nowrap;
+    }
+    .nav-btn:hover { transform:scale(1.04);box-shadow:var(--shadow); }
+
+    /* ── Animations ── */
+    @keyframes fadeUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+    .fade-in { opacity:0;animation:fadeUp 1s ease forwards; }
+
+    /* Scroll reveal */
+    .reveal { opacity:0;transform:translateY(30px);transition:opacity .9s ease,transform .9s ease; }
+    .reveal.visible { opacity:1;transform:translateY(0); }
+
+    /* Stagger landing */
+    .stagger > * { opacity:0;animation:fadeUp .8s ease forwards; }
+    .stagger > *:nth-child(1) { animation-delay:.15s; }
+    .stagger > *:nth-child(2) { animation-delay:.35s; }
+    .stagger > *:nth-child(3) { animation-delay:.55s; }
+
+    /* ── Sections ── */
+    .section {
+      position:relative;z-index:1;min-height:100vh;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:6rem 1.5rem 4rem;max-width:720px;margin:0 auto;
+    }
+
+    /* ── Glass card ── */
+    .glass-card {
+      background:var(--card);border:1px solid var(--card-border);
+      border-radius:2rem;backdrop-filter:blur(22px);
+      box-shadow:var(--shadow);padding:2rem 2.2rem;
+      transition:background .7s,border .7s;
+    }
+
+    /* ── Typography ── */
+    h1 { font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(2.2rem,6vw,3.4rem);line-height:1.25;color:var(--text-primary); }
+    h2 { font-family:'Cormorant Garamond',serif;font-weight:300;font-style:italic;font-size:clamp(1.5rem,4vw,2.2rem);color:var(--text-secondary); }
+    p { font-size:1rem;line-height:1.95;color:var(--text-secondary);font-weight:300; }
+    .soft-label { font-size:.73rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text-soft);font-weight:500; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      background:linear-gradient(135deg,var(--accent1),var(--accent2));
+      border:none;border-radius:50px;padding:.88rem 2.3rem;
+      font-size:.95rem;color:var(--text-primary);cursor:pointer;
+      font-family:'DM Sans',sans-serif;font-weight:400;
+      transition:transform .3s ease,box-shadow .3s ease;
+      box-shadow:0 4px 22px rgba(180,140,210,.22);letter-spacing:.01em;
+    }
+    .btn-primary:hover { transform:scale(1.05);box-shadow:0 8px 32px rgba(180,140,210,.38); }
+    .btn-primary:active { transform:scale(0.98); }
+
+    /* ── Interactive cards ── */
+    .icard {
+      background:var(--card);border:1px solid var(--card-border);border-radius:1.75rem;
+      backdrop-filter:blur(20px);padding:1.5rem 1.8rem;cursor:pointer;width:100%;text-align:left;
+      transition:transform .35s ease,box-shadow .35s ease,background .7s;
+      box-shadow:var(--shadow);display:flex;align-items:center;gap:1rem;
+      font-family:'DM Sans',sans-serif;
+    }
+    .icard:hover { transform:translateY(-4px);box-shadow:0 16px 50px rgba(160,120,200,.22); }
+    .icard:active { transform:translateY(-1px); }
+
+    /* ── Memory cards ── */
+    .mcard {
+      background:var(--card);border:1px solid var(--card-border);border-radius:1.5rem;
+      backdrop-filter:blur(18px);padding:1.3rem 1.6rem;
+      box-shadow:var(--shadow);display:flex;align-items:center;gap:1rem;transition:background .7s;
+    }
+
+    /* ── Textarea ── */
+    textarea {
+      width:100%;background:rgba(255,255,255,.32);
+      border:1px solid rgba(200,170,220,.32);border-radius:1.25rem;
+      padding:1.2rem 1.4rem;font-family:'DM Sans',sans-serif;
+      font-size:.95rem;font-weight:300;color:var(--text-primary);
+      resize:none;outline:none;transition:border .3s,background .3s;line-height:1.75;
+    }
+    [data-theme="dark"] textarea { background:rgba(40,26,58,.55);border-color:rgba(140,100,180,.28); }
+    textarea::placeholder { color:var(--text-soft); }
+    textarea:focus { border-color:rgba(180,140,220,.55);background:rgba(255,255,255,.48); }
+    [data-theme="dark"] textarea:focus { background:rgba(50,32,72,.65); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position:fixed;inset:0;z-index:200;background:rgba(30,15,50,.4);
+      backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;
+      padding:1.5rem;animation:fadeIn .35s ease;
+    }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .modal-box {
+      background:var(--modal-bg);border:1px solid var(--card-border);
+      border-radius:2rem;padding:2.5rem 2.2rem;max-width:440px;width:100%;
+      box-shadow:0 24px 80px rgba(120,80,180,.22);position:relative;text-align:center;
+      animation:scaleIn .4s cubic-bezier(.34,1.56,.64,1);transition:background .7s;
+    }
+    @keyframes scaleIn { from{opacity:0;transform:scale(.85) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
+    .modal-close {
+      position:absolute;top:1.2rem;right:1.4rem;background:none;border:none;
+      font-size:1.1rem;cursor:pointer;color:var(--text-soft);transition:color .2s;line-height:1;
+    }
+    .modal-close:hover { color:var(--text-secondary); }
+
+    /* ── Space glow ── */
+    .space-glow {
+      background:radial-gradient(ellipse at center,var(--glow) 0%,transparent 72%);
+      border-radius:3rem;padding:3.5rem 2.5rem;text-align:center;transition:background .9s;
+    }
+
+    /* ── Divider ── */
+    .divider { width:60px;height:1px;background:linear-gradient(90deg,transparent,var(--accent1),transparent);margin:1.5rem auto; }
+
+    /* ── Saved banner ── */
+    .saved-banner {
+      background:linear-gradient(135deg,rgba(180,220,180,.3),rgba(160,200,220,.3));
+      border:1px solid rgba(160,200,160,.4);border-radius:1rem;
+      padding:.8rem 1.4rem;font-size:.88rem;color:#5a8a6a;text-align:center;
+      animation:fadeUp .4s ease;margin-top:1rem;
+    }
+    [data-theme="dark"] .saved-banner { color:#8ac8a0; }
+
+    /* ── Section dots ── */
+    .sdots { position:fixed;right:1.4rem;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:.6rem; }
+    .dot { width:6px;height:6px;border-radius:50%;background:var(--text-soft);opacity:.4;cursor:pointer;transition:opacity .3s,transform .3s,background .3s; }
+    .dot.active { opacity:1;background:var(--accent2);transform:scale(1.5); }
+
+    /* ── Heartbeat ── */
+    @keyframes heartbeat { 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
+    .hb { animation:heartbeat 3s ease-in-out infinite;display:inline-block; }
+
+    .final-text { font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(1.3rem,4vw,2rem);line-height:1.8;color:var(--text-secondary);text-align:center; }
+
+    @media(max-width:600px){
+      .sdots{display:none}
+      .navbar{padding:1rem 1.1rem}
+      .nav-btn{padding:.38rem .75rem;font-size:.73rem}
+    }
+
+    .cursor-glow {
+  position: fixed;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 200, 220, 0.25), transparent 70%);
+  z-index: 0;
+  transform: translate(-50%, -50%);
+  transition: transform 0.08s ease;
+}
+.heart {
+  position: fixed;
+  font-size: 14px;
+  animation: floatHeart 6s linear infinite;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+@keyframes floatHeart {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  20% { opacity: 0.6; }
+  100% {
+    transform: translateY(-120px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+.typing-text {
+  display: inline-block;
+  overflow: hidden;
+  border-right: 2px solid var(--text-soft);
+  white-space: nowrap;
+  animation: typing 3s steps(30, end), blink 1s infinite;
+}
+
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+@keyframes blink {
+  50% { border-color: transparent }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    /* ── IntersectionObserver for .reveal elements ── */
+    function useReveal() {
+      useEffect(() => {
+        const io = new IntersectionObserver(
+          entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+          { threshold: 0.12 }
+        );
+        document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+        return () => io.disconnect();
+      });
+    }
+
+    /* ── Particles ── */
+    function Particles() {
+      const list = Array.from({ length: 14 }, (_, i) => ({
+        id: i,
+        left: `${5 + Math.random() * 88}%`,
+        bottom: `${Math.random() * 35}%`,
+        size: `${3 + Math.random() * 5}px`,
+        delay: `${Math.random() * 12}s`,
+        duration: `${9 + Math.random() * 10}s`,
+        color: ['#f4c6d8','#d4c6f4','#c6e8f4','#f4d8c6'][i % 4],
+      }));
+      return (
+        <div style={{ position:'fixed', inset:0, zIndex:0, pointerEvents:'none' }}>
+          {list.map(p => (
+            <div key={p.id} className="particle" style={{
+              left:p.left, bottom:p.bottom, width:p.size, height:p.size,
+              background:p.color, animationDelay:p.delay, animationDuration:p.duration,
+            }} />
+          ))}
+        </div>
+      );
+    }
+
+    /* ── Navbar ── */
+    function Navbar({ dark, toggleDark, playing, togglePlay, entered }) {
+      return (
+        <nav className="navbar">
+          <div className="nav-logo">I'm Still, Yours ✦</div>
+          {entered && (
+            <div className="nav-controls">
+              <button className="nav-btn" onClick={togglePlay}>
+                {playing ? '⏸ pause' : 'A little background melody… 🎧'}
+              </button>
+              <button className="nav-btn" onClick={toggleDark}>
+                {dark ? '🌞 day' : '🌙 night'}
+              </button>
+            </div>
+          )}
+        </nav>
+      );
+    }
+
+    /* ── Modal ── */
+    function Modal({ data, onClose }) {
+      useEffect(() => {
+        if (!data) return;
+        const h = e => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', h);
+        return () => window.removeEventListener('keydown', h);
+      }, [data]);
+      if (!data) return null;
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={onClose}>✕</button>
+            <div style={{ fontSize:'2.2rem', marginBottom:'1rem' }}>{data.emoji}</div>
+            <h2 style={{ fontSize:'1.35rem', marginBottom:'1rem' }}>{data.title}</h2>
+            <div className="divider" />
+            <p style={{ marginTop:'1.2rem', lineHeight:2.1, whiteSpace:'pre-line' }}>{data.message}</p>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Section Dots ── */
+    function SectionDots({ active }) {
+      const ids = ['welcome','interactive','memories','space','message','final'];
+      return (
+        <div className="sdots">
+          {ids.map((id, i) => (
+            <div key={id} className={`dot${active === i ? ' active' : ''}`}
+              onClick={() => document.getElementById(id)?.scrollIntoView({ behavior:'smooth' })} />
+          ))}
+        </div>
+      );
+    }
+
+    /* ── Landing ── */
+    function Landing({ onEnter, name }) {
+      return (
+        <section className="section" style={{ textAlign:'center', gap:'2.2rem' }}>
+          <div className="stagger" style={{ display:'flex', flexDirection:'column', gap:'2rem', alignItems:'center', width:'100%' }}>
+            <div>
+              <p className="soft-label" style={{ marginBottom:'1.2rem' }}>made with care</p>
+              <h1 className="fade-in">
+                Hey {name}<br/>
+                <span className="typing-text">
+                  just a quiet little corner
+                </span>
+              </h1>
+            </div>
+            <div className="glass-card" style={{ maxWidth:520, textAlign:'left' }}>
+              <p style={{ fontSize:'1.05rem', lineHeight:2.1 }}>
+                This is just a small, quiet space I made for you <span className="hb">💛</span><br/>
+                No expectations, no pressure.<br/>
+                You can stay for a moment… or leave anytime.
+              </p>
+            </div>
+            <button className="btn-primary" onClick={onEnter}>
+              Enter only if you feel like ✦
+            </button>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── Welcome ── */
+    function Welcome() {
+      return (
+        <section className="section" id="welcome">
+          <div className="reveal" style={{ textAlign:'center' }}>
+            <p className="soft-label" style={{ marginBottom:'1rem' }}>welcome in</p>
+            <h1 style={{ fontStyle:'italic', fontWeight:300, fontSize:'clamp(1.9rem,5vw,2.8rem)' }}>
+              Scroll gently…
+            </h1>
+            <p style={{ marginTop:'2.5rem', fontSize:'1.5rem', color:'var(--text-soft)' }}>↓</p>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── Interactive Cards ── */
+    function InteractiveCards( { name }) {
+      const [modal, setModal] = useState(null);
+      const cards = [
+        {
+          emoji: "😊",
+          label: "If you're smiling",
+          message: `Sach bolu ${name}…  
+        agar tu smile kar rahi hai na,  
+        toh woh mere liye already enough hai.`
+        },
+        {
+          emoji: "💭",
+          label: "If you're thinking about us",
+          title: "Thoda sa bhi… kaafi hota hai",
+          message: `Agar thoda sa bhi yaad aata hu…  
+        toh bhi it's more than enough.  
+
+        Sab cheezein marzi ki nahi hoti…  
+        aur na hi usse force karni chahiye.`
+        },
+
+        {
+          emoji: "🌿",
+          label: "If you just want peace and space",
+          title: "Sabse important hai",
+          message: `Bubbu, agar tujhe yeh chahiye…  
+        toh woh sabse important hai.  
+
+        Main yahin hoon…  
+        bina tere dreams ke bich aaye or na disturb kiye...`
+        }
+      ];
+      return (
+        <section className="section" id="interactive">
+          <div style={{ width:'100%', maxWidth:560 }}>
+            <div className="reveal" style={{ textAlign:'center', marginBottom:'2.5rem' }}>
+              <p className="soft-label" style={{ marginBottom:'.7rem' }}>how are you feeling?</p>
+              <h2>Choose what feels true right now</h2>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+              {cards.map((c, i) => (
+                <div key={i} className="reveal" style={{ transitionDelay:`${i*0.15}s` }}>
+                  <button className="icard" onClick={() => setModal(c)}>
+                    <span style={{ fontSize:'1.6rem', flexShrink:0 }}>{c.emoji}</span>
+                    <span style={{ color:'var(--text-secondary)', fontSize:'1rem', fontWeight:400 }}>{c.label}</span>
+                    <span style={{ marginLeft:'auto', color:'var(--text-soft)', fontSize:'1.1rem' }}>→</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Modal data={modal} onClose={() => setModal(null)} />
+        </section>
+      );
+    }
+
+    /* ── Memories ── */
+    function Memories() {
+      const list = [
+        { icon:'✨', text:'I still remember that first hug and how you lean on my shoulder.' },
+        { icon:'🌸', text:'The first eye contact, the first time you smiled at me.' },
+        { icon:'🍃', text:'Har ek pal jo humne saath bityae hai, Sare dil me kaid hai mere humesha ke liye.' },
+      ];
+      return (
+        <section className="section" id="memories">
+          <div style={{ width:'100%', maxWidth:560 }}>
+            <div className="reveal" style={{ textAlign:'center', marginBottom:'2.5rem' }}>
+              <p className="soft-label" style={{ marginBottom:'.7rem' }}>small things</p>
+              <h2>What I carry gently</h2>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'1rem', marginBottom:'2.2rem' }}>
+              {list.map((m, i) => (
+                <div key={i} className="reveal mcard" style={{ transitionDelay:`${i*0.18}s` }}>
+                  <span style={{ fontSize:'1.35rem', flexShrink:0 }}>{m.icon}</span>
+                  <p style={{ margin:0, fontSize:'.97rem' }}>{m.text}</p>
+                </div>
+              ))}
+            </div>
+            <div className="reveal glass-card" style={{ textAlign:'center' }}>
+              <p style={{ fontStyle:'italic', fontFamily:"'Cormorant Garamond',serif", fontSize:'1.08rem', lineHeight:2.2 }}>
+                "Main inhe yaad isliye nahi karta  
+  ki sab wapas waise ho jaaye…  
+
+  bas isliye…  
+  kyunki yeh sab bohot pure aur real tha."
+              </p>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── Space Section ── */
+    function Space() {
+      return (
+        <section className="section" id="space">
+          <div style={{ width:'100%', maxWidth:560 }}>
+            <div className="reveal space-glow">
+              <p className="soft-label" style={{ textAlign:'center', marginBottom:'1.4rem' }}>above all else</p>
+              <h1 style={{ textAlign:'center', marginBottom:'1.8rem', fontSize:'clamp(1.9rem,5vw,3rem)' }}>
+                For me<br/>
+                <span style={{ fontStyle:'italic', fontWeight:300 }}>it always been about you than me bubbu.</span>
+              </h1>
+              <div className="divider" />
+              <p style={{ textAlign:'center', marginTop:'1.8rem', lineHeight:2.3, fontSize:'1.04rem' }}>
+                I understand tujhe space chahiye hota hai<br/>
+                Aur yeh mujhe bohot pehle se pata hai and its completely fine, I will respect that kyuki personal space is important for our own self.<br/><br/>
+                Dekh firstly mujhe hurt hota hai kyuki<br/>mai bohot attached hu tujhse<br/>But fir mujhe chizen samjh aati hai toh normal ho jata hu.<br/><br/>
+                <span style={{ fontFamily:"'Cormorant Garamond',serif", fontStyle:'italic', fontSize:'1.25rem', color:'var(--text-primary)' }}>
+                  Main yahan hoon —  
+  par sirf tab tak, jab tak tu comfortable hai aur tu chahe.
+                </span>
+              </p>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── Message Box ── */
+    function MessageBox() {
+      const [msg, setMsg] = useState('');
+      const [saved, setSaved] = useState(false);
+      const [hasPrev, setHasPrev] = useState(false);
+      useEffect(() => {
+        const stored = localStorage.getItem('qs_msg');
+        if (stored) { setHasPrev(true); setMsg(stored); }
+      }, []);
+      const save = () => {
+        if (!msg.trim()) return;
+        localStorage.setItem('qs_msg', msg);
+        setHasPrev(true); setSaved(true);
+        setTimeout(() => setSaved(false), 3500);
+      };
+      return (
+        <section className="section" id="message">
+          <div style={{ width:'100%', maxWidth:560 }}>
+            <div className="reveal" style={{ textAlign:'center', marginBottom:'2rem' }}>
+              <p className="soft-label" style={{ marginBottom:'.7rem' }}>a soft place to share</p>
+              <h2>Only if you ever feel like saying something…</h2>
+              <p style={{ marginTop:'.9rem', fontSize:'.93rem' }}>
+                You don't have to reply.<br/>
+                But if someday you feel like sharing something… you can leave it here.
+              </p>
+            </div>
+            <div className="reveal glass-card">
+              <textarea rows={5} placeholder="Only if you want to…" value={msg} onChange={e => setMsg(e.target.value)} />
+              <div style={{ marginTop:'1rem', display:'flex', justifyContent:'flex-end' }}>
+                <button className="btn-primary" style={{ fontSize:'.88rem', padding:'.62rem 1.6rem' }} onClick={save}>
+                  Leave it here 🌸
+                </button>
+              </div>
+              {saved && <div className="saved-banner">Gently saved ✓ — it's safe here.</div>}
+              {hasPrev && !saved && (
+                <p style={{ marginTop:'.9rem', fontSize:'.81rem', color:'var(--text-soft)', fontStyle:'italic', textAlign:'right' }}>
+                  You've left something here before ✦
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── Final ── */
+    function Final() {
+      return (
+        <section className="section" id="final" style={{ minHeight:'80vh' }}>
+          <div className="reveal" style={{ maxWidth:480, textAlign:'center' }}>
+            <div style={{ fontSize:'2.6rem', marginBottom:'1.8rem' }}>🤍</div>
+            <div className="final-text">
+              "Whatever you choose…<br/>
+              I'll respect it.<br/><br/>
+              And I'll always wish the best for my Bubbu —<br/>
+              with or without me in it."
+            </div>
+            <div className="divider" style={{ marginTop:'2.2rem' }} />
+            <p style={{ marginTop:'1.5rem', fontSize:'.8rem', color:'var(--text-soft)', letterSpacing:'.1em' }}>
+              made with quiet love ✦ no strings attached
+            </p>
+          </div>
+        </section>
+      );
+    }
+
+    /* ── App ── */
+    function App() {
+      const name = "Bubbu";
+      const [dark, setDark]       = useState(true);
+      const [entered, setEntered] = useState(false);
+      const [playing, setPlaying] = useState(false);
+      const [activeDot, setActiveDot] = useState(0);
+      const audioRef = useRef(null);
+       // 👈 change this to her name
+
+      useReveal();
+
+      useEffect(() => {
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      }, [dark]);
+
+      useEffect(() => {
+        if (!entered) return;
+        const ids = ['welcome','interactive','memories','space','message','final'];
+        const onScroll = () => {
+          let cur = 0;
+          ids.forEach((id, i) => {
+            const el = document.getElementById(id);
+            if (el && window.scrollY >= el.offsetTop - 320) cur = i;
+          });
+          setActiveDot(cur);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+      }, [entered]);
+
+      const togglePlay = () => {
+  if (!audioRef.current) {
+    audioRef.current = new Audio('madhosh2.mp3'); // change here
+    audioRef.current.loop = true;
+    audioRef.current.volume = 0.3;
+  }
+
+  if (playing) {
+    audioRef.current.pause();
+    setPlaying(false);
+  } else {
+    audioRef.current.play()
+      .then(() => setPlaying(true))
+      .catch((err) => {
+        console.log("Audio play failed:", err);
+      });
+  }
+};
+
+      const handleEnter = () => {
+  setEntered(true);
+
+  // Start music automatically AFTER click
+  if (!audioRef.current) {
+    audioRef.current = new Audio('madhosh2.mp3');
+    audioRef.current.loop = true;
+    audioRef.current.volume = 0.25;
+  }
+
+  audioRef.current.play().then(() => {
+    setPlaying(true);
+  }).catch(() => {});
+
+  setTimeout(() => {
+    document.getElementById('welcome')?.scrollIntoView({ behavior:'smooth' });
+  }, 80);
+};
+
+      return (
+        <>
+          <div className="bg-canvas">
+            <div className="orb orb-1" /><div className="orb orb-2" /><div className="orb orb-3" />
+          </div>
+          <Particles />
+          <Navbar dark={dark} toggleDark={() => setDark(d => !d)}
+            playing={playing} togglePlay={togglePlay} entered={entered} />
+          {entered && <SectionDots active={activeDot} />}
+          {!entered
+            ? <Landing onEnter={handleEnter} name={name} />
+            : <div style={{ animation:'fadeUp 1s ease' }}>
+                <Welcome />
+                <InteractiveCards name = {name}/>
+                <Memories />
+                <Space />
+                <MessageBox />
+                <Final />
+              </div>
+          }
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
