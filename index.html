@@ -551,12 +551,20 @@
         const stored = localStorage.getItem('qs_msg');
         if (stored) { setHasPrev(true); setMsg(stored); }
       }, []);
-      const save = () => {
-        if (!msg.trim()) return;
-        localStorage.setItem('qs_msg', msg);
-        setHasPrev(true); setSaved(true);
-        setTimeout(() => setSaved(false), 3500);
-      };
+      const save = async () => {
+              if (!msg.trim()) return;
+            
+              await fetch("https://formspree.io/f/myknopvy", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ message: msg })
+              });
+            
+              setSaved(true);
+              setTimeout(() => setSaved(false), 3000);
+            };
       return (
         <section className="section" id="message">
           <div style={{ width:'100%', maxWidth:560 }}>
